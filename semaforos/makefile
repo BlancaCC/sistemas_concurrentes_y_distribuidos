@@ -1,5 +1,5 @@
 .SUFFIXES:
-.PHONY: 
+.PHONY: fu
 .PRECIOUS: %_exe
 
 compilador:=g++

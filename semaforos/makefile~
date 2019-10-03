@@ -7,6 +7,9 @@ compilador:=g++
 varfifo: prodcons_varios_consumidores_productores_exe
 	./$<
 
+varlifo: prodcons_varios_consumidores_productores_exe
+	./$< lifo
+
 lifopc: prodcons_exe
 	./$< lifo
 fifo: prodcons_exe
