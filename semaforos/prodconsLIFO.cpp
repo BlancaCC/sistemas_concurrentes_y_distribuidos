@@ -12,14 +12,15 @@ using namespace SEM ;
 // variables compartidas
 
 const int num_items = 40 ,   // número de items
-	       tam_vec   = 10 ;   // tamaño del buffer
+	       tam_vec   = 5 ;   // tamaño del buffer
 unsigned  cont_prod[num_items] = {0}, // contadores de verificación: producidos
           cont_cons[num_items] = {0}; // contadores de verificación: consumidos
 
+
 // IMPLEMENTACIÓN LIFO
 
-Semaphore puede_escribir_lifo = tam_vec;
-Semaphore puede_leer_lifo = 0;
+Semaphore puede_escribir_lifo = tam_vec; //queda espacio en el buffer
+Semaphore puede_leer_lifo = 0; //hay elementos para leer en el buffer
 
 // para proteger la zona crítica puede usarse un semáforo o mutex
 // se va a optar por semáforos así que se comentarán los mutex con la siguiente nomenclatura //!M 
@@ -48,27 +49,6 @@ struct Pila {
 
 Pila pila; 
 
-
-//_________ implementación FIFO ______
-Semaphore puede_escribir_fifo = tam_vec;
-Semaphore puede_leer_fifo = 0;
-
-//cola sin comprobaciones
-struct Cola {
-  int v[tam_vec];
-  int ini=-1; //última posición leída
-  int fin=0; // apunta a la posición a añadir
-
-  void escribir( int n) {
-    v[fin] =n;
-    fin = (fin+1)%tam_vec;     
-  }
-  int leer() {
-    ini = (ini+1)%tam_vec;
-    return v[ini]; 
-  }
-};
-Cola cola; 
 
 //**********************************************************************
 // plantilla de función para generar un entero aleatorio uniformemente
@@ -105,7 +85,7 @@ void consumir_dato( unsigned dato )
    cont_cons[dato] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
 
-   cout << "consumido: " << dato << endl ;
+   cout << "\t\tconsumido: " << dato << endl ;
 
 }
 
@@ -136,13 +116,14 @@ void  funcion_hebra_productora_lifo(  )
 {
    for( unsigned i = 0 ; i < num_items ; i++ )
    {
-      
-      
+     //PREGUNTAR DIFERENCIA ENTRE PRODUCIR DATO AQUÍ O DENTRO DE LA ZONA CRÍTICA
+      int dato = producir_dato() ;
       sem_wait( puede_escribir_lifo ); //queda espacio en la pila
       
       sem_wait( zona_critica); //el consumidor no está en la zona crítica       
       //!M tocando_pila.lock();
-      int dato = producir_dato() ;
+      
+      //int dato = producir_dato() ;
       pila.escribir(dato); //escribimos dato en la pila común 
       
       //!Mtocando_pila.unlock();
@@ -154,11 +135,9 @@ void  funcion_hebra_productora_lifo(  )
 }
 void funcion_hebra_consumidora_lifo(  )
 {
+  int dato ;
    for( unsigned i = 0 ; i < num_items ; i++ )
-   {
-      int dato ;
-
-      
+   {  
       sem_wait( puede_leer_lifo); //hay datos escritos
 
       sem_wait ( zona_critica);
@@ -173,77 +152,25 @@ void funcion_hebra_consumidora_lifo(  )
       
     }
 }
-//----------------------------------------------------------------------
-//--------------------------- FIFO  --------------------------------
-//----------------------------------------------------------------------
-
-void funcion_hebra_consumidora_fifo(  )
-{
-   for( unsigned i = 0 ; i < num_items ; i++ )
-   {
-      int dato ;
-
-      
-      sem_wait( puede_leer_fifo); //hay datos escritos
-     
-      dato= cola.leer();
-      consumir_dato( dato ) ;
-
-      sem_signal( puede_escribir_fifo); 
-
-      
-      
-    }
-}
-void  funcion_hebra_productora_fifo(  )
-{
-   for( unsigned i = 0 ; i < num_items ; i++ )
-   {
-      
-      
-      sem_wait( puede_escribir_fifo ); //queda espacio en la cola           
-
-      int dato = producir_dato() ;
-      cola.escribir(dato); //escribimos dato en la pila común 
-      sem_signal( puede_leer_fifo);
-      
-   }
-}
 
 //----------------------------------------------------------------------
 
-int main( int argc, char * argv[])
+int main( )
 {
-  if (argc > 1 ) { //  Si se ha escrito algo por argumentos 
-   cout << "--------------------------------------------------------" << endl
-        << "Problema de los productores-consumidores (solución LIFO)." << endl
-        << "--------------------------------------------------------" << endl
-        << flush ;
 
-   thread hebra_productora ( funcion_hebra_productora_lifo ),
-          hebra_consumidora( funcion_hebra_consumidora_lifo );
+  cout << "--------------------------------------------------------" << endl
+       << "Problema de los productores-consumidores (solución LIFO)." << endl
+       << "--------------------------------------------------------" << endl
+       << flush ;
 
-   hebra_productora.join() ;
-   hebra_consumidora.join() ;
+  thread hebra_productora ( funcion_hebra_productora_lifo ),
+    hebra_consumidora( funcion_hebra_consumidora_lifo );
 
-   test_contadores();
+  hebra_productora.join() ;
+  hebra_consumidora.join() ;
 
-  }
-  else {
-    cout << "--------------------------------------------------------" << endl
-	 << "Problema de los productores-consumidores (solución FIFO)." << endl
-	 << "--------------------------------------------------------" << endl
-	 << flush ;
+  test_contadores();
 
 
-      
-    thread hebra_productora ( funcion_hebra_productora_fifo ),
-      hebra_consumidora( funcion_hebra_consumidora_fifo );
-
-    hebra_productora.join() ;
-    hebra_consumidora.join() ;
-
-    test_contadores();
-  }
   return 0; 
 }
