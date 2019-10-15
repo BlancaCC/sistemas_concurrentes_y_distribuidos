@@ -1,0 +1,65 @@
+g++ -std=c++11 -pthread -o varios_consFIFO_exe varios_consFIFO.cpp Semaphore.cpp
+./varios_consFIFO_exe
+--------------------------------------------------------
+Problema de VARIOS  productores-consumidores (solución FIFO).
+--------------------------------------------------------
+hebra 1 produce: 0
+hebra 0 produce: 1
+hebra 2 produce: 2
+hebra 1 produce: 3
+hebra 2 produce: 4
+			 hebra  0 consume: 0
+hebra 0 produce: 5
+			 hebra  3 consume: 1
+hebra 1 produce: 6
+hebra hebra 20 produce:  produce: 77
+
+			 hebra  4 consume: 2
+			 hebra  4 consume: 3
+hebra 0 produce: 9
+hebra 1 produce: 10
+			 hebra  2 consume: 4
+hebra 2 produce: 11
+hebra 1 produce: 12
+			 hebra  1 consume: 5
+hebra 0 produce: 13
+hebra 1 produce: 14
+hebra 2 produce: 15
+			 hebra  5 consume: 6
+			 hebra  6 consume: 7
+hebra 1 produce: 16
+hebra 0 produce: 17
+			 hebra  7 consume: 8
+			 hebra  8 consume: 9
+hebra 2 produce: 18
+			 hebra  9 consume: 10
+hebra 1 produce: 19
+			 hebra  hebra 0 consume: 011 produce: 
+20
+			 hebra  hebra 3 consume: 122 produce: 21
+
+hebra 1 produce: 22
+			 hebra  4 consume: 13
+hebra 0 produce: 23
+			 hebra  2 consume: 14
+			 hebra  1 consume: 15
+hebra 2 produce: 24
+			 hebra  5 consume: 16
+hebra 1 produce: 25
+hebra 0 produce: 26
+			 hebra  6 consume: 17
+hebra 2 produce: 27
+			 hebra  7 consume: 18
+			 hebra  hebra 8 consume: 0 produce: 1928
+
+hebra 2 produce: 29
+			 hebra  0 consume: 20
+			 hebra  9 consume: 21
+			 hebra  3 consume: 22
+			 hebra  4 consume: 23
+			 hebra  2 consume: 24
+			 hebra  1 consume: 25
+			 hebra  5 consume: 26
+			 hebra  6 consume: 27
+			 hebra  8 consume: 28
+			 hebra  7 consume: 29

@@ -4,10 +4,10 @@
 
 compilador:=g++
 
-varfifo: prodcons_varios_consumidores_productores_exe
+varfifo: varios_consFIFO_exe
 	./$<
 
-varlifo: prodcons_varios_consumidores_productores_exe
+varlifo: varios_consLIFO_exe
 	./$< 
 
 lifopc: prodconsLIFO_exe
@@ -21,7 +21,7 @@ fu: fumadores_exe
 %_exe: %.cpp
 	$(compilador) -std=c++11 -pthread -o $@ $< Semaphore.cpp
 
-exeall: lifopc fifopc
+exeall: lifopc fifopc varfifo varlifo
 
 
 clean:
