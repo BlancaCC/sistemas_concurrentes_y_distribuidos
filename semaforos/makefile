@@ -4,6 +4,9 @@
 
 compilador:=g++
 
+xamen: estancos2_exe
+	./$<
+
 estanquero: estanquero_exe
 	./$<
 
