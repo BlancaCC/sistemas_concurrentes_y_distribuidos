@@ -4,6 +4,9 @@
 
 compilador:=g++
 
+estanquero: estanquero_exe
+	./$<
+
 varfifo: varios_consFIFO_exe
 	./$<
 
