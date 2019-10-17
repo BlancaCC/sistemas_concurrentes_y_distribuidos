@@ -18,7 +18,8 @@ Semaphore mostrador_disponible = 1;
 const int maxIngrediente = numFumadores -1; 
 
 //fumadores esperando 
-vector <Semaphore> fumador ( numFumadores,  Semaphore(0));
+//vector <Semaphore> fumador ( numFumadores,  Semaphore(0));
+Semaphore fumador[ numFumadores] = {0,0,0}; 
 
 
   
@@ -104,7 +105,8 @@ int main()
   thread estanquero_hebra (funcion_hebra_estanquero);
   thread fumador_hebra[ numFumadores ];
 
-  for (int i=0; i<numFumadores ; i++ )   fumador_hebra[i] = thread ( funcion_hebra_fumador, i );
+  for (int i=0; i<numFumadores ; i++ )
+    fumador_hebra[i] = thread ( funcion_hebra_fumador, i );
 
   estanquero_hebra.join(); //no hace falra esperar a las otras 
 }

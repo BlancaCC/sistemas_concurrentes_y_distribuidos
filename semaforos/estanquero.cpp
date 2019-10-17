@@ -32,21 +32,18 @@ template< int min, int max > int aleatorio()
 
 
 const int numEstanqueros= 2, numFumadores=4; //cada fumador consume un tipo concreto de producto, un estanquero puede vender cualquiera
-//inicializamos estanqueros y fumadores sin suministros
-  vector<Semaphore> estanquero ( numEstanqueros, Semaphore(0));
-  vector<Semaphore> sFumador ( numFumadores, Semaphore(0));
+
 mutex mtxCout; 
 
 class Monitor {
 
 private:
 
-  //static int num_suministros = 5; //número de elementos quue le da al estanquero
   //inicializamos estanqueros y fumadores sin suministros
-  //vector<Semaphore> estanquero ( numEstanqueros, Semaphore(0));
-  //vector<Semaphore> fumador ( numFumadores, Semaphore(0));
   Semaphore sReponer = 1; //al comenzar se repone a un estanquero
   Semaphore sMostrador = 1; //mostrador vacío
+  Semaphore estanquero[numEstanqueros]={0,0};
+  Semaphore sFumador[numFumadores]=  {0,0,0,0}; 
 
   int elementosConsumidos = 0; //número de elementos que han consumido 
   const int numSuministros = 2;    // número de elementos que se recargan tras cada gestion
@@ -68,8 +65,9 @@ public:
     //tiempo que tarda de gestion
      chrono::milliseconds duracion_reponer( aleatorio<20,200>() );
      mtxCout.lock();
-     cout << "GESTOR: " <<  duracion_reponer.count()
-	  << "ms reponer al estanquero " << n_estanquero << endl;
+     cout << "\nGESTOR( " <<  duracion_reponer.count()
+	  << "ms) repone al estanquero " << n_estanquero
+	  << "con " << numSuministros<< "elementos"<<endl << flush;
      mtxCout.unlock();
      this_thread::sleep_for( duracion_reponer);
 
@@ -86,19 +84,19 @@ public:
     sem_wait( estanquero[n_estanquero]); // tiene sumisnistros 
     sem_wait( sMostrador); // comprobamos que esté vacío
 
-    int elemento = aleatorio <0,numFumadores-1>();
+    int elemento = aleatorio <0,(numFumadores-1)>();
 
     //tiempo que tarda en reponer
      chrono::milliseconds duracion_poner( aleatorio<20,200>() );
      this_thread::sleep_for( duracion_poner);
      mtxCout.lock();
-     cout << " \tMOSTRADOR (estanquero "<< n_estanquero<<") :" <<  duracion_poner.count()
-	  << "ms el elemento " << elemento << " en el mostrador "<< endl;
+     cout << " \tMOSTRADOR estanquero "<< n_estanquero<<") " <<  duracion_poner.count()
+	  << "ms coloca elemento " << elemento << " en el mostrador "<< endl<<flush;
      mtxCout.unlock();
      
      //activamos fumador correspondiente
      sem_signal( sFumador[elemento] );
-     
+    
      //veamos si se necesita volver a reponer
      mtxElementosConsumidos.lock(); //zona crítica
      if ( ++elementosConsumidos % numSuministros == 0 ) {
@@ -112,17 +110,25 @@ public:
 
     sem_wait ( sFumador[n_fumador]); // hay en el mostrador algo para él
 
+    mtxCout.lock();
+    cout << "fumador " << n_fumador << "coge objeto del mostrador" << endl; 
+    sem_signal( sMostrador);
+    mtxCout.unlock();
+    
     // calcular milisegundos aleatorios de duración de la acción de fumar)
    chrono::milliseconds duracion_fumar( aleatorio<20,200>() );
 
    // informa de que comienza a fumar
    mtxCout.lock();
-   cout << "\t\t FUMAR: Fumador " << n_fumador << "  :"
-	 << " empieza a fumar (" << duracion_fumar.count() << " milisegundos)" << endl<< endl;
+   cout << "\t\t FUMAR: Fumador " << n_fumador 	<< " empieza a fumar"<< endl;
    mtxCout.unlock();
-   sem_signal( sMostrador);
+   
    // espera bloqueada un tiempo igual a ''duracion_fumar' milisegundos
    this_thread::sleep_for( duracion_fumar );
+    mtxCout.lock();
+   cout << "\t\tFumador " << n_fumador 	<< " ha terminado fumar ("
+	<<duracion_fumar.count()<< " ms)"<< endl;
+   mtxCout.unlock();
    
 	       
   }
@@ -132,13 +138,14 @@ public:
    */
 
   bool fin() {
-    //NUNCA ACABA 
+    //NUNCA ACABA  ret = false
     /**
     mtxElementosConsumidos.lock(); 
     bool ret = !( elementosConsumidos < finGestor );
     mtxElementosConsumidos.unlock();
     */
-    return false; 
+    bool ret = false; 
+    return ret; 
   }
   
 }; 
@@ -147,12 +154,12 @@ Monitor gestor;
 
 //----- funciones  hebra --------
 
-void funcion_hebra_fumador( int n) {
+void funcion_hebra_fumador( int id) {
   while ( !gestor.fin()) {
-    gestor.fumador( n); 
+    gestor.fumador(id); 
   }
   mtxCout.lock();
-  cout << "\t\t\tFIN fumador " << n << " se cansa de fumar"<< endl; 
+  cout << "\t\t\tFIN fumador " << id << " se cansa de fumar"<< endl; 
   mtxCout.unlock();
 }
 
@@ -188,10 +195,12 @@ int main() {
     hFumadores[i] = thread( funcion_hebra_fumador, i);
 
    //esperamos hebras
+   /**
    for ( int i=0; i<numFumadores; i++)
      hFumadores[i].join();
    
    for ( int i=0; i<numEstanqueros; i++)
      hEstanquero[i].join(); 
+   */
   hGestor.join(); 
 }
