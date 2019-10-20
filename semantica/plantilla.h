@@ -29,7 +29,7 @@ template< int min, int max > int aleatorio()
 int producir_dato()
 {
    static int contador = 0 ;
-   this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
+   //this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
 
    //cout << "producido: " << contador << endl << flush ;
 
@@ -38,13 +38,13 @@ int producir_dato()
 }
 //----------------------------------------------------------------------
 
-void consumir_dato( unsigned dato )
+void consumir_dato( unsigned dato, int id )
 {
   //assert( dato < N_DATOS );
    cont_cons[dato] ++ ;
-   this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
-
-   //cout << "\t\tconsumido: " << dato << endl ;
+   //this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
+   if (cont_cons[dato] >1) cout << "ERROR(id.dato)"<< id<<dato<< endl; 
+   cout << "\t\tconsumido(" <<id << ") "<< dato << endl ;
 
 }
 

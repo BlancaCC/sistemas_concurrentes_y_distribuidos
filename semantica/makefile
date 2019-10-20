@@ -7,11 +7,15 @@ compilador:=g++
 sclifo: prodConsSCLIFO_exe
 	./$<
 
+scfifo: prodConsSCFIFO_exe
+	./$<
+
+
 %_exe: %.cpp plantilla.h
 	$(compilador) -std=c++11 -pthread -o $@ $< 
 
 
 
 clean:
-	rm -f *_exe *~
+	rm -f *_exe *~ *.pdf
 

@@ -127,7 +127,7 @@ public:
 void Consumidor ( int id, ProdConsSCLIFO * monitor) {
   while( monitor->puedoConsumir()) {
     
-    consumir_dato ( monitor->extraer(id)); 
+    consumir_dato (monitor->extraer(id), id); 
   }
 
   cout << "\t\t¡¡¡Consumidor "<< id << " finaliza su tarea !!!"<< endl; 
@@ -146,8 +146,8 @@ void Productor( int id, ProdConsSCLIFO * monitor) {
 
 int main() {
 
-  const int N_CONSUMIDORES=5, N_PRODUCTORES=10;
-  const int TAM_BUFFER=5;
+  const int N_CONSUMIDORES=2, N_PRODUCTORES=11;
+  const int TAM_BUFFER=7;
   cout << "------------------------------------------------------------------------------------" << endl
 	 << "  Problema de los productores-consumidores (solución LIFO con monitor y semántica SC)" << endl
 	 << "Nº de ítems: "<< N_DATOS << " | Nº consumidores: " << N_CONSUMIDORES
