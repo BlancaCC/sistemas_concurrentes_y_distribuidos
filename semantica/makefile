@@ -7,7 +7,7 @@ compilador:=g++
 sclifo: prodConsSCLIFO_exe
 	./$<
 
-%_exe: %.cpp
+%_exe: %.cpp plantilla.h
 	$(compilador) -std=c++11 -pthread -o $@ $< 
 
 

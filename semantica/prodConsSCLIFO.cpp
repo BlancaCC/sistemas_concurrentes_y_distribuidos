@@ -1,31 +1,32 @@
+/**
+   @author Blanca Cano Camarero
+ */
+
 #include <iostream>
 #include <cassert>
 #include <thread>
 #include <mutex>
-#include <random>
 #include <condition_variable>
 
+#include "plantilla.h"
 
 using namespace std;
 
 
-const int N_CONSUMIDORES=3, N_PRODUCTORES=2;
-const int TAM_BUFFER=3;
-// variables compartidas
-
-const int N_DATOS = 40;    // número de items
-unsigned  cont_prod[N_DATOS] = {0}, // contadores de verificación: producidos
-  cont_cons[N_DATOS] = {0}; // contadores de verificación: consumidos
 
 class ProdConsSCLIFO {
 
 private:
   //estructura LIFO
-  int pila[TAM_BUFFER]; 
+  
   int primeraLibre=0; 
-
+  int *pila;
+  int TAM_BUFFER;
   //variables permanentes para acceso y control
-  mutex mtxPila, mtxProductores, mtxConsumidores;
+  mutex mtxPila,                       //exclusión mutua pila
+    mtxPuedoConsumir,mtxPuedoProducir, //condión fin de consumidores y prods
+    mtxProductores, mtxConsumidores;
+  
   condition_variable colaProductor, colaConsumidor;
   int cntProductores, cntConsumidores; 
   
@@ -33,33 +34,52 @@ private:
 
 public:
 
-  void  insertar( int dato, int nHebra) {
+  ProdConsSCLIFO( int tamBuffer) {
+    primeraLibre=0;
+    TAM_BUFFER=tamBuffer;
+    pila=new int[TAM_BUFFER];
+    cntProductores=0;
+    cntConsumidores=0; 
+  }
+  ~ProdConsSCLIFO() {
+    delete [] pila;
+    pila=NULL; 
+  }
+
+  void  insertar( int nHebra) {
 
     //tener cuidado con la variable primeraLibre
+    unique_lock<mutex> ulCompruebaLibreProd( mtxProductores);
     while ( primeraLibre ==TAM_BUFFER) {
-      wait(colaProductor);
+    //if ( primeraLibre ==TAM_BUFFER) {
+      colaProductor.wait(ulCompruebaLibreProd);
     }
     
     mtxPila.lock();
-    pila[primeraLibre++]=dato;
-    cout << "Productor " << nHebra << " escribe " << dato << endl;
+    int dato = producir_dato(); //producimos dato justo aquí
+    pila[primeraLibre++]= dato; 
+    cout << "Productor " << nHebra << " escribe " << dato
+	 << "(datos en pila: " << primeraLibre << ")" << endl;
     mtxPila.unlock();
 
-    notify_one(sConsumir); 
+    colaConsumidor.notify_one(); 
   }
 
   int extraer( int nHebra) {
 
+    unique_lock<mutex> ulCompruebaLibreCons(mtxConsumidores);
     while (primeraLibre == 0) {
-      wait( colaConsumidores);
+    //if (primeraLibre == 0) {
+      colaConsumidor.wait( ulCompruebaLibreCons);
     }
 
     mtxPila.lock();
     int dato=pila[--primeraLibre]; 
-    cout << "\t\t\tConsumidor " << nHebra << " extrae" << dato << endl; 
+    cout << "\t\t\tConsumidor " << nHebra << " extrae " << dato
+	 << " (datos en pila: " << primeraLibre <<  ")"<< endl; 
     mtxPila.unlock();
     
-    notify_one(colaProductores);
+    colaProductor.notify_one();
 
     return dato; 
     
@@ -68,134 +88,92 @@ public:
   /**
      @brief nos proporciona si quedan datos por producir
    */
-  bool puedoPoducir() {
-
-    unique_lock<mutex>(mtxProductores);
+  bool puedoProducir() {
     bool ret=false;
-    
+    mtxPuedoProducir.lock();
+    //unique_lock<mutex>(mtxPuedoProducir);
+    //      cout << "¿producir? " <<  cntProductores << endl;  
     if( cntProductores < N_DATOS) {
       ret=true;
       cntProductores++; 
     }
+     mtxPuedoProducir.unlock();
     return ret; 
   }
   
   bool puedoConsumir() {
     
     bool ret=false;
-    unique_lock<mutex>(mtxConsumidores);
+    // unique_lock<mutex>(mtxPuedoConsumir);
+    mtxPuedoConsumir.lock();
+    //cout << "Consumir?? " << cntConsumidores << endl; 
     if( cntConsumidores <N_DATOS) {
       ret=true;
       cntConsumidores++;
     }
+    mtxPuedoConsumir.unlock(); 
     return ret; 
   }
+
+ 
   
 };
 
 
 // -------- Funciones de la plantilla ---- 
 
-//**********************************************************************
-// plantilla de función para generar un entero aleatorio uniformemente
-// distribuido entre dos valores enteros, ambos incluidos
-// (ambos tienen que ser dos constantes, conocidas en tiempo de compilación)
-//----------------------------------------------------------------------
-
-template< int min, int max > int aleatorio()
-{
-  static default_random_engine generador( (random_device())() );
-  static uniform_int_distribution<int> distribucion_uniforme( min, max ) ;
-  return distribucion_uniforme( generador );
-}
-
-//**********************************************************************
-// funciones comunes a las dos soluciones (fifo y lifo)
-//----------------------------------------------------------------------
-
-int producir_dato()
-{
-   static int contador = 0 ;
-   this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
-
-   cout << "producido: " << contador << endl << flush ;
-
-   cont_prod[contador] ++ ;
-   return contador++ ;
-}
-//----------------------------------------------------------------------
-
-void consumir_dato( unsigned dato )
-{
-   assert( dato < N_DATOS );
-   cont_cons[dato] ++ ;
-   this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
-
-   cout << "\t\tconsumido: " << dato << endl ;
-
-}
-
-
-//----------------------------------------------------------------------
-
-void test_contadores()
-{
-   bool ok = true ;
-   cout << "comprobando contadores ...." ;
-   for( unsigned i = 0 ; i < N_DATOS ; i++ )
-   {  if ( cont_prod[i] != 1 )
-      {  cout << "error: valor " << i << " producido " << cont_prod[i] << " veces" << endl ;
-         ok = false ;
-      }
-      if ( cont_cons[i] != 1 )
-      {  cout << "error: valor " << i << " consumido " << cont_cons[i] << " veces" << endl ;
-         ok = false ;
-      }
-   }
-   if (ok)
-      cout << endl << flush << "solución (aparentemente) correcta." << endl << flush ;
-}
-
-
-
 //---------------------- mis productores y consumidores --------------
 
-void Consumidor ( int id, ProdConsSCLIFO & monitor) {
-  while( monitor.puedoConsumir()) {
+void Consumidor ( int id, ProdConsSCLIFO * monitor) {
+  while( monitor->puedoConsumir()) {
     
-    consumir_dato ( monitor.extraer() ); 
+    consumir_dato ( monitor->extraer(id)); 
   }
+
+  cout << "\t\t¡¡¡Consumidor "<< id << " finaliza su tarea !!!"<< endl; 
 }
 
-void Productor( int id, ProdConsSCLIFO & monitor) {
+void Productor( int id, ProdConsSCLIFO * monitor) {
 
-  while( monitor.puedoProducir() ) {
-    monitor.escribir( poducir_dato());
+  while( monitor->puedoProducir() ) {
+    monitor->insertar( id);
   }
+    cout << "¡¡¡Productor "<< id << " finaliza su tarea!!!"<< endl; 
 }
 
 
 //------- main----
 
 int main() {
-    cout << "------------------------------------------------------------------------------------" << endl
+
+  const int N_CONSUMIDORES=5, N_PRODUCTORES=10;
+  const int TAM_BUFFER=5;
+  cout << "------------------------------------------------------------------------------------" << endl
 	 << "  Problema de los productores-consumidores (solución LIFO con monitor y semántica SC)" << endl
-	 << "Nº de ítems: "<< N_DATOS << " | Nº consumidores:" << N_CONSUMIDORES << " | Nº productores" << N_PRODUCTORES << endl
+	 << "Nº de ítems: "<< N_DATOS << " | Nº consumidores: " << N_CONSUMIDORES
+	 << " | Nº productores: " << N_PRODUCTORES << " | tamaño buffer: " <<TAM_BUFFER << endl
 	 << "--------------------------------------------------------------------------------------" << endl
        << flush ;
 
-  ProdConsSCLIFO m;
-  thread tConsumidores[N_CONSUMIDORES],tProductores[N_CONSUMIDORES];
+  ProdConsSCLIFO monitor(TAM_BUFFER);
+  thread tConsumidores[N_CONSUMIDORES],tProductores[N_PRODUCTORES];
 
-  for(int i=0; i<N_CONSUMIDORES, i++)
-    tConsumidores[i]=thread(Cosumidor, i,m);
+  for(int i=0; i<N_CONSUMIDORES; i++)
+    tConsumidores[i]=thread(Consumidor, i,&monitor);
   
-  for(int i=0; i<N_PRODUCTORES, i++)
-    tConsumidores[i]=thread(Productor, i,m);
+  for(int i=0; i<N_PRODUCTORES; i++)
+    tProductores[i]=thread(Productor, i,&monitor);
 
   //los consumidores acabaran después de los productores, por tanto solo bastará esperarlos a ellos
-  for(int i=0; i<N_CONSUMIDORES, i++)
+  for(int i=0; i<N_PRODUCTORES; i++)
+    tProductores[i].join();
+
+  for(int i=0; i<N_CONSUMIDORES; i++)
     tConsumidores[i].join();
+
+  test_contadores(N_DATOS);
+
+  
 
 
   
