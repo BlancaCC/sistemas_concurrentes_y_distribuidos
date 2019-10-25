@@ -3,6 +3,9 @@
 #include <random>
 using namespace std;
 
+const int N_DATOS = 20 ;   // tamaño del buffer
+unsigned  cont_prod[N_DATOS] = {0}, // contadores de verificación: producidos
+          cont_cons[N_DATOS] = {0}; // contadores de verificación: consumidos
 
 // -------- Funciones de la plantilla ---- 
 
@@ -25,7 +28,7 @@ void sleep_this_thread() {
 //**********************************************************************
 // funciones comunes a las dos soluciones (fifo y lifo)
 //----------------------------------------------------------------------
-/**
+
 int producir_dato()
 {
    static int contador = 0 ;
@@ -40,7 +43,7 @@ int producir_dato()
 
 void consumir_dato( unsigned dato )
 {
-  //assert( dato < N_DATOS );
+  assert( dato < N_DATOS );
    cont_cons[dato] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
    //if (cont_cons[dato] >1) cout << "ERROR(id.dato)"<< this_thread::get_id()<<dato<< endl; 
@@ -49,7 +52,7 @@ void consumir_dato( unsigned dato )
 }
 void consumir_dato( unsigned dato, int id )
 {
-  //assert( dato < N_DATOS );
+  assert( dato < N_DATOS );
    cont_cons[dato] ++ ;
   this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
   //if (cont_cons[dato] >1) cout << "ERROR(id.dato)"<< id<<dato<< endl; 
@@ -81,4 +84,3 @@ void test_contadores( int N_DATOS)
 }
 
 
-*/
