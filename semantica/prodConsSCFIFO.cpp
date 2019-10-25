@@ -160,7 +160,7 @@ int main() {
   for(int i=0; i<N_CONSUMIDORES; i++)
     tConsumidores[i].join();
 
-  test_contadores(N_DATOS);
+
 
   
 

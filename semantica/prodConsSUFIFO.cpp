@@ -15,25 +15,30 @@ class ProdConsSUFIFO : public HoareMonitor {
 
 private:
   CondVar colaProductores, colaConsumidores;
-  mutex mtxProductores, mtxConsumidores; 
+  mutex mtxProductores, mtxConsumidores, mtxProducirDato; 
 
   //tipo estructua
   int tamBuffer, cntBuffer; //tamaño del buffer y contador de datos escritos 
   int *cola;                //puntero estructura almacenamiento tipo fifo
-  int posEscritura,posLectura;  //posiciones de escritura y lectura actuales en el buffer 
+  int posEscritura,posLectura;  //posiciones de escritura y lectura actuales en el buffer
+  int dato=0; //contador de datos a producir
+  
 
 public:
   ProdConsSUFIFO ( int tam_buffer);
   ~ProdConsSUFIFO();
 
+  int producirDato(); 
   void insertar(int dato, int id);
   int extraer(int id); 
     
 };
 
 ProdConsSUFIFO::ProdConsSUFIFO( int tam_buffer) {
+  //
+  dato = 0; 
   //inicializamos estructura de almacenamiento
-  tamBuffer = tamBuffer;
+  tamBuffer = tam_buffer;
   posEscritura = posLectura = cntBuffer=0;
   cola = new int [tamBuffer];
 
@@ -50,15 +55,15 @@ void ProdConsSUFIFO::insertar(int dato, int id) {
   if ( cntBuffer == tamBuffer) { //buffer lleno tiene que esperar
     colaProductores.wait(); 
   }
-
   //escribimos en la cola
   //región crítica entre productores
   mtxProductores.lock();
   cntBuffer++; 
   cola[posEscritura] = dato;
+  cout << "Productor " << id  << " escribe " << cola[posEscritura] << endl<<flush; 
   posEscritura = (posEscritura + 1) % tamBuffer;
 
-  cout << "Productor " << this_thread::get_id()  << " escribe " << dato << endl; 
+  
   mtxProductores.unlock();
 
   //un elemento más puede consumirse
@@ -68,16 +73,15 @@ void ProdConsSUFIFO::insertar(int dato, int id) {
 
 int ProdConsSUFIFO::extraer( int id) {
   if( cntBuffer == 0) { //nada que consumir, debe esperar
-    cout << "consumidor " << this_thread::get_id() <<" queda paralizada "<< endl; 
     colaConsumidores.wait(); 
   }
 
   mtxConsumidores.lock();
   cntBuffer--; 
   int dato = cola[posLectura];
-  posLectura = (posLectura + 1) & tamBuffer;
+  posLectura = (posLectura + 1) % tamBuffer;
 
-  cout << "\t\t Consumidor " << this_thread::get_id() << " extrae elemento " << dato << endl;
+  cout << "\t\t\t Consumidor " << id << " extrae elemento " << dato << endl<<flush;
   mtxConsumidores.unlock();
 
   //liberamos una casilla en la que escribir
@@ -85,23 +89,35 @@ int ProdConsSUFIFO::extraer( int id) {
 
   return dato; 
 }
+
+int ProdConsSUFIFO::producirDato() {
+  unique_lock<mutex>(mtxProducirDato); 
+  return dato++; 
+}
 // ---------- productores consumidores código -------------
 
-void Productor( int cantidad, ProdConsSUFIFO * monitor, int id) {
+void Productor( int inicio,int fin, MRef<ProdConsSUFIFO>  monitor, int id) {
 
-  for(int i=0; i<cantidad; i++) {
-    int dato = producir_dato(); 
-    monitor->insertar( dato, id);
+  for(int dato=inicio; dato<fin; dato++) {
+    //versión numeración hebras desordeada
+    // monitor->insertar( dato, id); //producimos datos desordenador
+
+    //versión hebras ordenadas
+    int md = monitor->producirDato(); 
+    monitor->insertar(md , id); //datos ordenados
+    
+    sleep_this_thread(); 
   }
-  cout << "Productor " << this_thread::get_id()<< " termina de producir " << endl; 
+  cout << "--- Productor " << id<< " termina de producir ---" << endl; 
 }
 
-void Consumidor(int cantidad, ProdConsSUFIFO * monitor, int id) {
+void Consumidor(int cantidad, MRef<ProdConsSUFIFO> monitor, int id) {
   
   for(int i=0; i<cantidad; i++) {
-    consumir_dato( monitor->extraer(id));
+    monitor->extraer(id); //consumimos dato
+    sleep_this_thread(); 
   }
-  cout << "\t\t Consumidor " <<this_thread::get_id()  << "ha acabado de consumir " << endl; 
+  cout << "\t\t\t Consumidor " <<id  << " ha acabado de consumir " << endl; 
 }
 
 
@@ -112,7 +128,7 @@ int main() {
   int tamBuffer = 3;
   int numConsumidores= 4;
   int numProductores = 5;
-  int cantidad = 40;
+  int cantidad = 21;
 
 
   cout << "------------------------------------------------------------------------------------" << endl
@@ -124,7 +140,7 @@ int main() {
        << "--------------------------------------------------------------------------------------" << endl;
   
   // inicial monitor
-  ProdConsSUFIFO monitor(tamBuffer); 
+  MRef<ProdConsSUFIFO> monitor = Create<ProdConsSUFIFO>(tamBuffer); 
 
   // hebras que entran en juego
   thread tProductor[numProductores], tConsumidor[numConsumidores];
@@ -139,22 +155,30 @@ int main() {
 
   // Consumidores con una consumición más, "reparto módulo"
   for(int i=0; i<restoConsumidor; i++) {
-    cout << " se ha producido al hebra " << i << "  con módulo " << endl; 
-    tConsumidor[i] = thread( Consumidor, (repartoConsumidor+1), &monitor); 
+    //cout << " se ha producido al hebra " << i << "  con módulo " << endl; 
+    tConsumidor[i] = thread( Consumidor, (repartoConsumidor+1), monitor, i); 
   }
   for(int i=restoConsumidor; i<numConsumidores; i++){
-    cout << " se ha producido al hebra " << i << " sin módulo " << endl; 
-    tConsumidor[i] = thread(Consumidor, repartoConsumidor, &monitor); 
+    //cout << " se ha producido al hebra " << i << " sin módulo " << endl; 
+    tConsumidor[i] = thread(Consumidor, repartoConsumidor, monitor, i); 
   }
 
   //reparto productores
+  int cantidad_inicio = 0,
+    cantidad_fin = 0 ; 
   for(int i=0; i<restoProductor; i++) {
-    cout << " se ha producido el productor " << i << "  con módulo " << endl; 
-    tProductor[i] = thread(Productor, (repartoProductor+1), &monitor, i); 
+   
+    cantidad_inicio = cantidad_fin;
+    cantidad_fin += (repartoProductor+1);
+
+    //cout << " se ha producido el productor " << i << "  con módulo " << endl;
+    tProductor[i] = thread(Productor,cantidad_inicio, cantidad_fin, monitor, i); 
   }
   for(int i=restoProductor; i<numProductores; i++){
-    cout << " se ha producido el productor " << i << "  SIN módulo " << endl; 
-    tProductor[i] = thread(Productor, repartoProductor, &monitor, i); 
+    //cout << " se ha producido el productor " << i << "  SIN módulo " << endl;
+     cantidad_inicio = cantidad_fin;
+    cantidad_fin += (repartoProductor);
+    tProductor[i] = thread(Productor, cantidad_inicio, cantidad_fin, monitor, i); 
   }
 
 
@@ -165,9 +189,6 @@ int main() {
  for(int i=0; i<numConsumidores; i++){
     tConsumidor[i].join();
   }
-
-  //comprobación contadores
-  test_contadores(cantidad); 
   
   return 0; 
 }

@@ -4,9 +4,6 @@
 using namespace std;
 
 
-const int N_DATOS = 40;    // número de items
-unsigned  cont_prod[N_DATOS] = {0}, // contadores de verificación: producidos
-  cont_cons[N_DATOS] = {0}; // contadores de verificación: consumidos
 // -------- Funciones de la plantilla ---- 
 
 //**********************************************************************
@@ -22,10 +19,13 @@ template< int min, int max > int aleatorio()
   return distribucion_uniforme( generador );
 }
 
+void sleep_this_thread() {
+  this_thread::sleep_for( chrono::milliseconds( aleatorio<100,200>() ));
+}
 //**********************************************************************
 // funciones comunes a las dos soluciones (fifo y lifo)
 //----------------------------------------------------------------------
-
+/**
 int producir_dato()
 {
    static int contador = 0 ;
@@ -43,17 +43,17 @@ void consumir_dato( unsigned dato )
   //assert( dato < N_DATOS );
    cont_cons[dato] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
-   if (cont_cons[dato] >1) cout << "ERROR(id.dato)"<< this_thread::get_id()<<dato<< endl; 
-   cout << "\t\tconsumido(" <<this_thread::get_id() << ") "<< dato << endl ;
+   //if (cont_cons[dato] >1) cout << "ERROR(id.dato)"<< this_thread::get_id()<<dato<< endl; 
+   //   cout << "\t\tconsumido(" <<this_thread::get_id() << ") "<< dato << endl ;
 
 }
 void consumir_dato( unsigned dato, int id )
 {
   //assert( dato < N_DATOS );
    cont_cons[dato] ++ ;
-   this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
-   if (cont_cons[dato] >1) cout << "ERROR(id.dato)"<< id<<dato<< endl; 
-   cout << "\t\tconsumido(" <<id << ") "<< dato << endl ;
+  this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
+  //if (cont_cons[dato] >1) cout << "ERROR(id.dato)"<< id<<dato<< endl; 
+   //cout << "\t\tconsumido(" <<id << ") "<< dato << endl ;
 
 }
 
@@ -81,3 +81,4 @@ void test_contadores( int N_DATOS)
 }
 
 
+*/
