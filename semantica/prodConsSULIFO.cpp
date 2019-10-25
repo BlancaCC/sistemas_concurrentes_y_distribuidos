@@ -8,10 +8,10 @@ using namespace std ;
 using namespace HM ;
 
 /**
-   @brief Monitor varios productores varios consumidores FIFO
+   @brief Monitor varios productores varios consumidores LIFO
    con semántica señalar urgente
  */
-class ProdConsSUFIFO : public HoareMonitor {
+class ProdConsSULIFO : public HoareMonitor {
 
 private:
   CondVar colaProductores, colaConsumidores;
@@ -19,14 +19,14 @@ private:
 
   //tipo estructua
   int tamBuffer, cntBuffer; //tamaño del buffer y contador de datos escritos 
-  int *cola;                //puntero estructura almacenamiento tipo fifo
-  int posEscritura,posLectura;  //posiciones de escritura y lectura actuales en el buffer
+  int *pila;                //puntero estructura almacenamiento lifo
+  int posTope;  //posiciones de escritura y lectura actuales en el buffer
   int dato=0; //contador de datos a producir
   
 
 public:
-  ProdConsSUFIFO ( int tam_buffer);
-  ~ProdConsSUFIFO();
+  ProdConsSULIFO ( int tam_buffer);
+  ~ProdConsSULIFO();
 
   int producirDato(); 
   void insertar(int dato, int id);
@@ -34,24 +34,24 @@ public:
     
 };
 
-ProdConsSUFIFO::ProdConsSUFIFO( int tam_buffer) {
+ProdConsSULIFO::ProdConsSULIFO( int tam_buffer) {
   //
   dato = 0; 
   //inicializamos estructura de almacenamiento
   tamBuffer = tam_buffer;
-  posEscritura = posLectura = cntBuffer=0;
-  cola = new int [tamBuffer];
+  posTope = cntBuffer=0;
+  pila = new int [tamBuffer];
 
   //variables de control de exclusión
   colaProductores = newCondVar();
   colaConsumidores = newCondVar();  
 }
-ProdConsSUFIFO::~ProdConsSUFIFO() {
-  delete [] cola;
-  cola=NULL; 
+ProdConsSULIFO::~ProdConsSULIFO() {
+  delete [] pila;
+  pila=NULL; 
 }
 
-void ProdConsSUFIFO::insertar(int dato, int id) {
+void ProdConsSULIFO::insertar(int dato, int id) {
   if ( cntBuffer == tamBuffer) { //buffer lleno tiene que esperar
     colaProductores.wait(); 
   }
@@ -59,9 +59,9 @@ void ProdConsSUFIFO::insertar(int dato, int id) {
   //región crítica entre productores
   mtxProductores.lock();
   cntBuffer++; 
-  cola[posEscritura] = dato;
-  cout << "Productor " << id  << " escribe " << cola[posEscritura] << endl<<flush; 
-  posEscritura = (posEscritura + 1) % tamBuffer;
+  pila[posTope++] = dato;
+  cout << "Productor " << id  << " escribe " <<   pila[(posTope-1)] << endl<<flush; 
+  
 
   
   mtxProductores.unlock();
@@ -71,16 +71,14 @@ void ProdConsSUFIFO::insertar(int dato, int id) {
   
 }
 
-int ProdConsSUFIFO::extraer( int id) {
+int ProdConsSULIFO::extraer( int id) {
   if( cntBuffer == 0) { //nada que consumir, debe esperar
     colaConsumidores.wait(); 
   }
 
-  mtxConsumidores.lock();
+  mtxConsumidores.lock(); //los primeros casos no nos aseguran la exclusión mutua
   cntBuffer--; 
-  int dato = cola[posLectura];
-  posLectura = (posLectura + 1) % tamBuffer;
-
+  int dato = pila[--posTope];
   cout << "\t\t\t Consumidor " << id << " extrae elemento " << dato << endl<<flush;
   mtxConsumidores.unlock();
 
@@ -90,13 +88,13 @@ int ProdConsSUFIFO::extraer( int id) {
   return dato; 
 }
 
-int ProdConsSUFIFO::producirDato() {
+int ProdConsSULIFO::producirDato() {
   unique_lock<mutex>(mtxProducirDato); 
   return dato++; 
 }
 // ---------- productores consumidores código -------------
 
-void Productor( int inicio,int fin, MRef<ProdConsSUFIFO>  monitor, int id) {
+void Productor( int inicio,int fin, MRef<ProdConsSULIFO>  monitor, int id) {
 
   for(int dato=inicio; dato<fin; dato++) {
     //versión numeración hebras desordeada
@@ -111,7 +109,7 @@ void Productor( int inicio,int fin, MRef<ProdConsSUFIFO>  monitor, int id) {
   cout << "--- Productor " << id<< " termina de producir ---" << endl; 
 }
 
-void Consumidor(int cantidad, MRef<ProdConsSUFIFO> monitor, int id) {
+void Consumidor(int cantidad, MRef<ProdConsSULIFO> monitor, int id) {
   
   for(int i=0; i<cantidad; i++) {
     monitor->extraer(id); //consumimos dato
@@ -125,14 +123,14 @@ void Consumidor(int cantidad, MRef<ProdConsSUFIFO> monitor, int id) {
 
 int main() {
 
-  int tamBuffer = 13;
-  int numConsumidores= 10;
-  int numProductores = 10;
-  int cantidad = 100;
+  int tamBuffer = 5;
+  int numConsumidores= 7;
+  int numProductores = 6;
+  int cantidad = 40;
 
 
   cout << "------------------------------------------------------------------------------------" << endl
-       << "  Problema de los productores-consumidores (solución FIFO con monitor y semántica SU)" << endl
+       << "  Problema de los productores-consumidores (solución LIFO con monitor y semántica SU)" << endl
        << "Nº de ítems: "<< cantidad
        << " | Nº consumidores: " <<numConsumidores
        << " | Nº productores: " << numProductores
@@ -140,7 +138,7 @@ int main() {
        << "--------------------------------------------------------------------------------------" << endl;
   
   // inicial monitor
-  MRef<ProdConsSUFIFO> monitor = Create<ProdConsSUFIFO>(tamBuffer); 
+  MRef<ProdConsSULIFO> monitor = Create<ProdConsSULIFO>(tamBuffer); 
 
   // hebras que entran en juego
   thread tProductor[numProductores], tConsumidor[numConsumidores];
