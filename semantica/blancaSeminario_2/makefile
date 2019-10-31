@@ -23,10 +23,6 @@ sufifo: prodConsSUFIFO_exe
 fumadores: fumadores_exe
 	./$<
 
-semaforoConMonitores: semaforoMonitores_exe
-	./$<
-barberoDurmiente: barberia_exe
-	./$<
 
 ## reglas de compilación
 
@@ -40,19 +36,6 @@ prodConsSUFIFO_exe: prodConsSUFIFO.cpp $(hmonsrcs)
 	$(compilador) $(opcionesc)  -o $@ $< HoareMonitor.cpp Semaphore.cpp
 prodConsSULIFO_exe: prodConsSULIFO.cpp $(hmonsrcs)
 	$(compilador) $(opcionesc)  -o $@ $< HoareMonitor.cpp Semaphore.cpp
-
-fumadores_exe: fumadores.cpp $(hmonsrcs)
-	$(compilador) $(opcionesc)  -o $@ $< HoareMonitor.cpp Semaphore.cpp
-
-semaforoMonitores_exe: semaforoConMonitores.cpp
-	$(compilador) $(opcionesc) -o $@ $<
-
-barberia_exe: barberia.cpp $(hmonsrcs)
-	$(compilador) $(opcionesc) -o $@ $< HoareMonitor.cpp Semaphore.cpp
-
-#%_exe: %.cpp plantilla.h
-#	$(compilador) $(opcionesc) -o $@ $< 
-
 
 
 clean:
