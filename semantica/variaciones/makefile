@@ -13,12 +13,18 @@ sulifo: prodConsSULIFO.out
 
 sufifo: prodConsSUFIFO.out
 	./$<
-barberia: barberia.out
+tijeras: tijeras.out
 	./$<
+
+dosBarberos: dosBarberos.out
+	./$<
+
 
 # _____ semánticas SU  _____ 
 
-barberia.out: barberia.cpp $(hmonsrcs)
+dosBarberos.out: dosBarberos.cpp
+	$(compilador) $(opcionesc) -o $@ $< HoareMonitor.cpp Semaphore.cpp
+tijeras.out: tijeras.cpp $(hmonsrcs)
 	$(compilador) $(opcionesc) -o $@ $< HoareMonitor.cpp Semaphore.cpp
 
 prodConsSUFIFO.out: prodConsSUFIFO.cpp $(hmonsrcs)
