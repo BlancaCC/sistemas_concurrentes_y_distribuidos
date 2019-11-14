@@ -18,12 +18,18 @@ tijeras: tijeras.out
 
 dosBarberos: dosBarberos.out
 	./$<
+varClientes: varClientes.out
+	./$<
 
 
 # _____ semánticas SU  _____ 
 
-dosBarberos.out: dosBarberos.cpp
+varClientes.out: varClientes.cpp $(hmonsrcs)
 	$(compilador) $(opcionesc) -o $@ $< HoareMonitor.cpp Semaphore.cpp
+
+dosBarberos.out: dosBarberos.cpp $(hmonsrcs)
+	$(compilador) $(opcionesc) -o $@ $< HoareMonitor.cpp Semaphore.cpp
+
 tijeras.out: tijeras.cpp $(hmonsrcs)
 	$(compilador) $(opcionesc) -o $@ $< HoareMonitor.cpp Semaphore.cpp
 
