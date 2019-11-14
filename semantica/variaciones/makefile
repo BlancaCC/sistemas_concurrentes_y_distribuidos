@@ -20,9 +20,13 @@ dosBarberos: dosBarberos.out
 	./$<
 varClientes: varClientes.out
 	./$<
+barberia2: barberia2.out
+	./$<
 
+# _____ semánticas SU  _____
 
-# _____ semánticas SU  _____ 
+barberia2.out: barberia2.cpp $(hmonsrcs)
+	$(compilador) $(opcionesc) -o $@ $< HoareMonitor.cpp Semaphore.cpp
 
 varClientes.out: varClientes.cpp $(hmonsrcs)
 	$(compilador) $(opcionesc) -o $@ $< HoareMonitor.cpp Semaphore.cpp

@@ -1,0 +1,15 @@
+Problema de pseudo minionero
+
+
+service misionero 1 {
+if  (olla == 0)
+    salvaje.wait()
+olla--
+
+if(olla==0 && ! concienero.empty())
+	   cocinero.signal()
+else
+	salvaje.signal()
+}
+
+

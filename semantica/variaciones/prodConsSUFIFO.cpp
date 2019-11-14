@@ -15,7 +15,7 @@ class ProdConsSUFIFO : public HoareMonitor {
 
 private:
   CondVar colaProductores, colaConsumidores;
-  mutex mtxProductores, mtxConsumidores, mtxProducirDato; 
+  //mutex mtxProductores, mtxConsumidores, mtxProducirDato; 
 
   //tipo estructua
   int tamBuffer, cntBuffer; //tamaño del buffer y contador de datos escritos 
@@ -57,14 +57,14 @@ void ProdConsSUFIFO::insertar(int dato, int id) {
   }
   //escribimos en la cola
   //región crítica entre productores
-  mtxProductores.lock();
+  //mtxProductores.lock();
   cntBuffer++; 
   cola[posEscritura] = dato;
   cout << "Productor " << id  << " escribe " << cola[posEscritura] << endl<<flush; 
   posEscritura = (posEscritura + 1) % tamBuffer;
 
   
-  mtxProductores.unlock();
+  //mtxProductores.unlock();
 
   //un elemento más puede consumirse
   colaConsumidores.signal(); 
@@ -76,13 +76,13 @@ int ProdConsSUFIFO::extraer( int id) {
     colaConsumidores.wait(); 
   }
 
-  mtxConsumidores.lock();
+  //mtxConsumidores.lock(); no es necesario ya que la semántica SU controla la exclusiín mutua
   cntBuffer--; 
   int dato = cola[posLectura];
   posLectura = (posLectura + 1) % tamBuffer;
 
   cout << "\t\t\t Consumidor " << id << " extrae elemento " << dato << endl<<flush;
-  mtxConsumidores.unlock();
+  // mtxConsumidores.unlock();
 
   //liberamos una casilla en la que escribir
   colaProductores.signal(); 
